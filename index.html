@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Công Cụ Tạo Barcode 128 - Mobile Optimized</title>
+    <!-- Thư viện Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Thư viện JsBarcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f3f4f6;
+            /* Ngăn chặn zoom lung tung trên mobile khi chạm nhanh */
+            touch-action: manipulation;
+        }
+
+        /* Tùy chỉnh cho Barcode Card */
+        .barcode-card {
+            background: white;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            /* Full width on mobile */
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* Đảm bảo SVG co giãn tốt trên màn hình nhỏ */
+        svg {
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* Input Styles cho Mobile: Chữ to, padding rộng để dễ bấm */
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            font-size: 16px !important;
+            /* Ngăn iOS tự zoom */
+        }
+
+        /* Chế độ in ấn */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+
+            body {
+                background-color: white;
+                padding: 0;
+            }
+
+            .print-area {
+                width: 100%;
+                display: block;
+            }
+
+            .barcode-pair {
+                border-bottom: 1px dashed #ccc;
+                padding-bottom: 20px;
+                margin-bottom: 20px;
+                page-break-inside: avoid;
+            }
+
+            /* Khi in thì bỏ shadow và border để tiết kiệm mực */
+            .barcode-card,
+            .barcode-pair {
+                box-shadow: none;
+                border: none;
+            }
+        }
+    </style>
+</head>
+
+<body class="p-3 md:p-6">
+
+    <!-- PHẦN ĐIỀU KHIỂN -->
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden mb-6 no-print">
+        <div class="p-4 md:p-6 bg-blue-600 text-white">
+            <h1 class="text-xl md:text-2xl font-bold">Tạo Barcode 128</h1>
+            <p class="opacity-90 text-sm">Công cụ hỗ trợ kho & sản xuất</p>
+        </div>
+
+        <!-- Tabs to dễ bấm -->
+        <div class="flex border-b border-gray-200">
+            <button onclick="switchTab('simple')" id="tab-simple"
+                class="flex-1 py-4 text-center font-medium text-blue-600 border-b-4 border-blue-600 bg-blue-50 focus:outline-none transition-colors active:bg-blue-100">
+                Tạo Đơn Lẻ
+            </button>
+            <button onclick="switchTab('pair')" id="tab-pair"
+                class="flex-1 py-4 text-center font-medium text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none transition-colors border-b-4 border-transparent active:bg-gray-100">
+                Tạo Theo Cặp
+            </button>
+        </div>
+
+        <div class="p-4 md:p-6">
+            <!-- FORM: TẠO ĐƠN -->
+            <div id="content-simple" class="block">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Nhập danh sách mã (Mỗi mã 1 dòng):
+                </label>
+                <textarea id="simpleInput" rows="5"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="501231231450&#10;501231231451"></textarea>
+
+                <button onclick="generateSimple()"
+                    class="mt-4 w-full bg-blue-600 active:bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95">
+                    Tạo Barcode Ngay
+                </button>
+            </div>
+
+            <!-- FORM: TẠO CẶP -->
+            <div id="content-pair" class="hidden">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Mã Mặt Da (Bắt đầu)</label>
+                        <input type="text" id="upperStart"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="VD: 50023001">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Mã Đế Giày (Bắt đầu)</label>
+                        <input type="text" id="soleStart"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="VD: 50023020">
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <label class="block text-gray-700 text-sm font-bold mb-1">Số lượng Size</label>
+                            <input type="number" id="sizeCount"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                value="1" min="1">
+                        </div>
+                        <div class="flex-none pt-6">
+                            <!-- Nút tăng giảm nhanh cho mobile -->
+                            <button onclick="adjustSize(1)"
+                                class="bg-gray-200 p-3 rounded-lg font-bold text-gray-700 active:bg-gray-300">+</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 bg-yellow-50 text-yellow-800 rounded text-sm border border-yellow-200">
+                    Hệ thống tự động tăng số cuối cho các size tiếp theo.
+                </div>
+
+                <button onclick="generatePairs()"
+                    class="mt-4 w-full bg-green-600 active:bg-green-800 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95">
+                    Tạo Barcode Cặp
+                </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-100">
+                <button onclick="clearResults()"
+                    class="flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium active:bg-gray-200">
+                    Xóa
+                </button>
+                <button onclick="window.print()"
+                    class="flex items-center justify-center py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold shadow active:bg-purple-800">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                        </path>
+                    </svg>
+                    In Ngay
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KHU VỰC HIỂN THỊ KẾT QUẢ -->
+    <div id="result-area" class="max-w-4xl mx-auto print-area space-y-4 pb-10">
+        <div id="placeholder" class="text-center text-gray-400 py-10 no-print italic">
+            Kết quả sẽ hiện ở đây...
+        </div>
+    </div>
+
+    <script>
+        // --- XỬ LÝ GIAO DIỆN ---
+        function switchTab(tab) {
+            const simpleBtn = document.getElementById('tab-simple');
+            const pairBtn = document.getElementById('tab-pair');
+            const simpleContent = document.getElementById('content-simple');
+            const pairContent = document.getElementById('content-pair');
+
+            if (tab === 'simple') {
+                simpleContent.classList.remove('hidden');
+                pairContent.classList.add('hidden');
+
+                simpleBtn.className = 'flex-1 py-4 text-center font-medium text-blue-600 border-b-4 border-blue-600 bg-blue-50 focus:outline-none transition-colors';
+                pairBtn.className = 'flex-1 py-4 text-center font-medium text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none transition-colors border-b-4 border-transparent';
+            } else {
+                simpleContent.classList.add('hidden');
+                pairContent.classList.remove('hidden');
+
+                pairBtn.className = 'flex-1 py-4 text-center font-medium text-blue-600 border-b-4 border-blue-600 bg-blue-50 focus:outline-none transition-colors';
+                simpleBtn.className = 'flex-1 py-4 text-center font-medium text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none transition-colors border-b-4 border-transparent';
+            }
+        }
+
+        function adjustSize(amount) {
+            const input = document.getElementById('sizeCount');
+            let val = parseInt(input.value) || 0;
+            val += amount;
+            if (val < 1) val = 1;
+            input.value = val;
+        }
+
+        function clearResults() {
+            document.getElementById('result-area').innerHTML = '<div id="placeholder" class="text-center text-gray-400 py-10 no-print italic">Kết quả sẽ hiện ở đây...</div>';
+            // Scroll lại lên đầu một chút để người dùng biết đã xóa
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // --- CẤU HÌNH BARCODE ---
+        const barcodeOptions = {
+            format: "CODE128",
+            lineColor: "#000",
+            width: 2,
+            height: 60, // Tăng chiều cao một chút cho dễ scan trên mobile
+            displayValue: true,
+            fontSize: 16, // Chữ to hơn
+            margin: 10
+        };
+
+        // --- LOGIC XỬ LÝ MÃ ---
+        function incrementCode(codeStr, addValue) {
+            if (/^\d+$/.test(codeStr)) {
+                let num = BigInt(codeStr);
+                let result = num + BigInt(addValue);
+                return result.toString().padStart(codeStr.length, '0');
+            } else {
+                return codeStr + "-" + addValue;
+            }
+        }
+
+        // --- TẠO ĐƠN ---
+        function generateSimple() {
+            const input = document.getElementById('simpleInput').value;
+            const container = document.getElementById('result-area');
+            container.innerHTML = '';
+
+            if (!input.trim()) {
+                alert("Bạn chưa nhập mã nào cả!");
+                return;
+            }
+
+            const lines = input.split('\n');
+            const grid = document.createElement('div');
+            // Mobile: 1 cột, Tablet trở lên: 2 cột
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+            let hasData = false;
+            lines.forEach(line => {
+                const code = line.trim();
+                if (code) {
+                    hasData = true;
+                    const card = document.createElement('div');
+                    card.className = 'barcode-card shadow-sm';
+
+                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                    try {
+                        JsBarcode(svg, code, barcodeOptions);
+                        card.appendChild(svg);
+                    } catch (e) {
+                        const err = document.createElement('div');
+                        err.innerHTML = `<span class="text-red-500 font-bold">Lỗi mã:</span> ${code}`;
+                        card.appendChild(err);
+                    }
+                    grid.appendChild(card);
+                }
+            });
+
+            if (hasData) {
+                container.appendChild(grid);
+                // Tự động cuộn xuống kết quả trên mobile
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+
+        // --- TẠO CẶP ---
+        function generatePairs() {
+            const startUpper = document.getElementById('upperStart').value.trim();
+            const startSole = document.getElementById('soleStart').value.trim();
+            const count = parseInt(document.getElementById('sizeCount').value);
+            const container = document.getElementById('result-area');
+
+            if (!startUpper || !startSole || !count || count < 1) {
+                alert("Vui lòng nhập đủ thông tin (Mã Da, Mã Đế, Số lượng).");
+                return;
+            }
+
+            container.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const currentUpper = incrementCode(startUpper, i);
+                const currentSole = incrementCode(startSole, i);
+
+                const pairRow = document.createElement('div');
+                // Mobile: Xếp dọc (col), Tablet: Xếp ngang (row)
+                pairRow.className = 'barcode-pair flex flex-col md:flex-row items-center justify-center gap-6 p-4 bg-white rounded-lg shadow border border-gray-200 mb-4';
+
+                // Wrapper Da
+                const upperWrapper = document.createElement('div');
+                upperWrapper.className = 'text-center w-full md:w-auto';
+                const upperTitle = document.createElement('div');
+                upperTitle.className = 'text-sm font-bold text-gray-500 mb-1 bg-gray-100 inline-block px-2 rounded';
+                upperTitle.innerText = `Da - Size ${i + 1}`;
+                const svgUpper = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                // Wrapper Đế
+                const soleWrapper = document.createElement('div');
+                soleWrapper.className = 'text-center w-full md:w-auto';
+                const soleTitle = document.createElement('div');
+                soleTitle.className = 'text-sm font-bold text-gray-500 mb-1 bg-gray-100 inline-block px-2 rounded';
+                soleTitle.innerText = `Đế - Size ${i + 1}`;
+                const svgSole = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                try {
+                    JsBarcode(svgUpper, currentUpper, barcodeOptions);
+                    JsBarcode(svgSole, currentSole, barcodeOptions);
+                } catch (e) {
+                    alert("Mã không hợp lệ để tạo Barcode 128");
+                    return;
+                }
+
+                upperWrapper.appendChild(upperTitle);
+                upperWrapper.appendChild(svgUpper);
+
+                soleWrapper.appendChild(soleTitle);
+                soleWrapper.appendChild(svgSole);
+
+                pairRow.appendChild(upperWrapper);
+
+                // Kẻ ngang phân cách trên mobile, kẻ dọc trên PC
+                const divider = document.createElement('div');
+                divider.className = 'w-full h-px bg-gray-200 md:w-px md:h-24 md:bg-gray-300 mx-2';
+                pairRow.appendChild(divider);
+
+                pairRow.appendChild(soleWrapper);
+
+                container.appendChild(pairRow);
+            }
+
+            // Cuộn xuống xem kết quả
+            setTimeout(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+    </script>
+</body>
+
+</html>
