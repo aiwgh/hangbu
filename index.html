@@ -107,12 +107,52 @@
         <div class="p-4 md:p-6">
             <!-- FORM: TẠO ĐƠN -->
             <div id="content-simple" class="block">
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Nhập danh sách mã (Mỗi mã 1 dòng):
-                </label>
-                <textarea id="simpleInput" rows="5"
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                    placeholder="501231231450&#10;501231231451"></textarea>
+                <!-- Toggle Mode: Manual vs Auto -->
+                <div class="flex gap-2 mb-4">
+                    <button onclick="toggleSimpleMode('manual')" id="simple-mode-manual"
+                        class="flex-1 py-2 text-center font-medium text-blue-600 border-2 border-blue-600 bg-blue-50 rounded-lg focus:outline-none transition-colors">
+                        Nhập Thủ Công
+                    </button>
+                    <button onclick="toggleSimpleMode('auto')" id="simple-mode-auto"
+                        class="flex-1 py-2 text-center font-medium text-gray-500 border-2 border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors">
+                        Tự Động Liên Tiếp
+                    </button>
+                </div>
+
+                <!-- Manual Input Mode -->
+                <div id="simple-manual-mode" class="block">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        Nhập danh sách mã (Mỗi mã 1 dòng):
+                    </label>
+                    <textarea id="simpleInput" rows="5"
+                        class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                        placeholder="501231231450&#10;501231231451"></textarea>
+                </div>
+
+                <!-- Auto Generate Mode -->
+                <div id="simple-auto-mode" class="hidden space-y-4">
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-1">Mã Bắt Đầu</label>
+                        <input type="text" id="simpleAutoStart"
+                            class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            placeholder="VD: 501231231450">
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div class="flex-1">
+                            <label class="block text-gray-700 text-sm font-bold mb-1">Số Lượng</label>
+                            <input type="number" id="simpleAutoCount"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                value="1" min="1">
+                        </div>
+                        <div class="flex-none pt-6">
+                            <button onclick="adjustSimpleCount(1)"
+                                class="bg-gray-200 p-3 rounded-lg font-bold text-gray-700 active:bg-gray-300">+</button>
+                        </div>
+                    </div>
+                    <div class="p-3 bg-yellow-50 text-yellow-800 rounded text-sm border border-yellow-200">
+                        Hệ thống tự động tăng số cuối cho các mã tiếp theo.
+                    </div>
+                </div>
 
                 <button onclick="generateSimple()"
                     class="mt-4 w-full bg-blue-600 active:bg-blue-800 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95">
@@ -161,21 +201,85 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-2 gap-3 mt-6 pt-4 border-t border-gray-100">
+            <div class="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-gray-100">
                 <button onclick="clearResults()"
                     class="flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium active:bg-gray-200">
                     Xóa
                 </button>
+                <button onclick="activateScanMode()" id="scan-mode-btn"
+                    class="flex items-center justify-center py-3 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold shadow active:bg-orange-800">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
+                        </path>
+                    </svg>
+                    Scan
+                </button>
                 <button onclick="window.print()"
                     class="flex items-center justify-center py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold shadow active:bg-purple-800">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
                         </path>
                     </svg>
-                    In Ngay
+                    In
                 </button>
             </div>
+        </div>
+    </div>
+
+    <!-- SCAN MODE INTERFACE -->
+    <div id="scan-mode-container"
+        class="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden mb-6 no-print hidden">
+        <div class="p-4 md:p-6 bg-orange-600 text-white">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl md:text-2xl font-bold">🔍 Chế Độ Scan</h2>
+                    <p class="opacity-90 text-sm">Scan từng mã một cách dễ dàng</p>
+                </div>
+                <button onclick="exitScanMode()"
+                    class="bg-white text-orange-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100 active:bg-gray-200">
+                    Thoát
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="px-4 md:px-6 pt-4">
+            <div class="flex justify-between text-sm font-medium text-gray-700 mb-2">
+                <span>Tiến Trình</span>
+                <span id="scan-progress-text">0/0</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                <div id="scan-progress-bar" class="bg-green-500 h-4 transition-all duration-300" style="width: 0%">
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Item Display -->
+        <div class="p-4 md:p-6">
+            <div id="scan-current-display"
+                class="bg-gray-50 rounded-lg p-6 min-h-[300px] flex flex-col items-center justify-center">
+                <!-- Barcode will be injected here -->
+            </div>
+
+            <!-- Navigation Controls -->
+            <div class="grid grid-cols-2 gap-3 mt-4">
+                <button onclick="scanPrevious()" id="scan-prev-btn"
+                    class="py-3 px-4 border-2 border-gray-300 rounded-lg text-gray-700 font-bold hover:bg-gray-50 active:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    ← Trước
+                </button>
+                <button onclick="scanNext()" id="scan-next-btn"
+                    class="py-3 px-4 border-2 border-gray-300 rounded-lg text-gray-700 font-bold hover:bg-gray-50 active:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                    Sau →
+                </button>
+            </div>
+
+            <!-- Mark as Scanned Button -->
+            <button onclick="markAsScanned()" id="scan-mark-btn"
+                class="mt-4 w-full bg-green-600 active:bg-green-800 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition transform active:scale-95 text-lg">
+                ✓ Đã Scan - Tiếp Theo
+            </button>
         </div>
     </div>
 
@@ -187,6 +291,13 @@
     </div>
 
     <script>
+        // --- GLOBAL SCAN MODE STATE ---
+        let scanModeActive = false;
+        let scanItems = [];
+        let scanCurrentIndex = 0;
+        let scannedItems = new Set();
+        let currentScanType = 'simple'; // 'simple' or 'pair'
+
         // --- XỬ LÝ GIAO DIỆN ---
         function switchTab(tab) {
             const simpleBtn = document.getElementById('tab-simple');
@@ -209,8 +320,38 @@
             }
         }
 
+        // Toggle between manual and auto mode for simple codes
+        function toggleSimpleMode(mode) {
+            const manualBtn = document.getElementById('simple-mode-manual');
+            const autoBtn = document.getElementById('simple-mode-auto');
+            const manualContent = document.getElementById('simple-manual-mode');
+            const autoContent = document.getElementById('simple-auto-mode');
+
+            if (mode === 'manual') {
+                manualContent.classList.remove('hidden');
+                autoContent.classList.add('hidden');
+
+                manualBtn.className = 'flex-1 py-2 text-center font-medium text-blue-600 border-2 border-blue-600 bg-blue-50 rounded-lg focus:outline-none transition-colors';
+                autoBtn.className = 'flex-1 py-2 text-center font-medium text-gray-500 border-2 border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors';
+            } else {
+                manualContent.classList.add('hidden');
+                autoContent.classList.remove('hidden');
+
+                autoBtn.className = 'flex-1 py-2 text-center font-medium text-blue-600 border-2 border-blue-600 bg-blue-50 rounded-lg focus:outline-none transition-colors';
+                manualBtn.className = 'flex-1 py-2 text-center font-medium text-gray-500 border-2 border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none transition-colors';
+            }
+        }
+
         function adjustSize(amount) {
             const input = document.getElementById('sizeCount');
+            let val = parseInt(input.value) || 0;
+            val += amount;
+            if (val < 1) val = 1;
+            input.value = val;
+        }
+
+        function adjustSimpleCount(amount) {
+            const input = document.getElementById('simpleAutoCount');
             let val = parseInt(input.value) || 0;
             val += amount;
             if (val < 1) val = 1;
@@ -247,49 +388,77 @@
 
         // --- TẠO ĐƠN ---
         function generateSimple() {
-            const input = document.getElementById('simpleInput').value;
             const container = document.getElementById('result-area');
             container.innerHTML = '';
 
-            if (!input.trim()) {
-                alert("Bạn chưa nhập mã nào cả!");
+            // Check which mode is active
+            const isAutoMode = !document.getElementById('simple-auto-mode').classList.contains('hidden');
+
+            let codes = [];
+
+            if (isAutoMode) {
+                // Auto-generate mode
+                const startCode = document.getElementById('simpleAutoStart').value.trim();
+                const count = parseInt(document.getElementById('simpleAutoCount').value);
+
+                if (!startCode || !count || count < 1) {
+                    alert("Vui lòng nhập Mã Bắt Đầu và Số Lượng!");
+                    return;
+                }
+
+                // Generate consecutive codes
+                for (let i = 0; i < count; i++) {
+                    codes.push(incrementCode(startCode, i));
+                }
+            } else {
+                // Manual mode
+                const input = document.getElementById('simpleInput').value;
+
+                if (!input.trim()) {
+                    alert("Bạn chưa nhập mã nào cả!");
+                    return;
+                }
+
+                const lines = input.split('\n');
+                lines.forEach(line => {
+                    const code = line.trim();
+                    if (code) {
+                        codes.push(code);
+                    }
+                });
+            }
+
+            if (codes.length === 0) {
+                alert("Không có mã nào để tạo!");
                 return;
             }
 
-            const lines = input.split('\n');
             const grid = document.createElement('div');
             // Mobile: 1 cột, Tablet trở lên: 2 cột
             grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
 
-            let hasData = false;
-            lines.forEach(line => {
-                const code = line.trim();
-                if (code) {
-                    hasData = true;
-                    const card = document.createElement('div');
-                    card.className = 'barcode-card shadow-sm';
+            codes.forEach(code => {
+                const card = document.createElement('div');
+                card.className = 'barcode-card shadow-sm';
 
-                    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
-                    try {
-                        JsBarcode(svg, code, barcodeOptions);
-                        card.appendChild(svg);
-                    } catch (e) {
-                        const err = document.createElement('div');
-                        err.innerHTML = `<span class="text-red-500 font-bold">Lỗi mã:</span> ${code}`;
-                        card.appendChild(err);
-                    }
-                    grid.appendChild(card);
+                try {
+                    JsBarcode(svg, code, barcodeOptions);
+                    card.appendChild(svg);
+                } catch (e) {
+                    const err = document.createElement('div');
+                    err.innerHTML = `<span class="text-red-500 font-bold">Lỗi mã:</span> ${code}`;
+                    card.appendChild(err);
                 }
+                grid.appendChild(card);
             });
 
-            if (hasData) {
-                container.appendChild(grid);
-                // Tự động cuộn xuống kết quả trên mobile
-                setTimeout(() => {
-                    container.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }, 100);
-            }
+            container.appendChild(grid);
+            // Tự động cuộn xuống kết quả trên mobile
+            setTimeout(() => {
+                container.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
         }
 
         // --- TẠO CẶP ---
@@ -360,6 +529,197 @@
             setTimeout(() => {
                 container.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 100);
+        }
+
+        // --- SCAN MODE FUNCTIONS ---
+        function activateScanMode() {
+            const resultArea = document.getElementById('result-area');
+
+            // Check if there are any barcodes generated
+            const simpleBarcodes = resultArea.querySelectorAll('.barcode-card');
+            const pairBarcodes = resultArea.querySelectorAll('.barcode-pair');
+
+            if (simpleBarcodes.length === 0 && pairBarcodes.length === 0) {
+                alert("Vui lòng tạo barcode trước khi vào chế độ Scan!");
+                return;
+            }
+
+            // Prepare scan items
+            scanItems = [];
+            scannedItems = new Set();
+
+            if (pairBarcodes.length > 0) {
+                // Pair mode
+                currentScanType = 'pair';
+                pairBarcodes.forEach((pair, index) => {
+                    const upperSvg = pair.querySelectorAll('svg')[0];
+                    const soleSvg = pair.querySelectorAll('svg')[1];
+                    const upperTitle = pair.querySelectorAll('.text-sm')[0]?.innerText || `Da - ${index + 1}`;
+                    const soleTitle = pair.querySelectorAll('.text-sm')[1]?.innerText || `Đế - ${index + 1}`;
+
+                    scanItems.push({
+                        index,
+                        type: 'pair',
+                        upperSvg: upperSvg.outerHTML,
+                        soleSvg: soleSvg.outerHTML,
+                        upperTitle,
+                        soleTitle
+                    });
+                });
+            } else {
+                // Simple mode
+                currentScanType = 'simple';
+                simpleBarcodes.forEach((card, index) => {
+                    const svg = card.querySelector('svg');
+                    if (svg) {
+                        scanItems.push({
+                            index,
+                            type: 'simple',
+                            svg: svg.outerHTML
+                        });
+                    }
+                });
+            }
+
+            if (scanItems.length === 0) {
+                alert("Không tìm thấy barcode hợp lệ!");
+                return;
+            }
+
+            // Activate scan mode
+            scanModeActive = true;
+            scanCurrentIndex = 0;
+
+            // Show scan mode container
+            document.getElementById('scan-mode-container').classList.remove('hidden');
+
+            // Render first item
+            renderScanItem();
+            updateScanProgress();
+
+            // Scroll to scan mode
+            setTimeout(() => {
+                document.getElementById('scan-mode-container').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+
+        function renderScanItem() {
+            if (scanItems.length === 0) return;
+
+            const display = document.getElementById('scan-current-display');
+            const currentItem = scanItems[scanCurrentIndex];
+            const isScanned = scannedItems.has(scanCurrentIndex);
+
+            let html = '';
+
+            if (currentItem.type === 'pair') {
+                html = `
+                    <div class="w-full">
+                        <div class="text-center mb-4">
+                            <span class="inline-block px-4 py-2 rounded-lg font-bold text-lg ${isScanned ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                                ${isScanned ? '✓ Đã Scan' : 'Chưa Scan'} - Cặp ${scanCurrentIndex + 1}/${scanItems.length}
+                            </span>
+                        </div>
+                        <div class="flex flex-col md:flex-row items-center justify-center gap-6">
+                            <div class="text-center">
+                                <div class="text-sm font-bold text-gray-500 mb-2">${currentItem.upperTitle}</div>
+                                ${currentItem.upperSvg}
+                            </div>
+                            <div class="w-full h-px bg-gray-300 md:w-px md:h-32"></div>
+                            <div class="text-center">
+                                <div class="text-sm font-bold text-gray-500 mb-2">${currentItem.soleTitle}</div>
+                                ${currentItem.soleSvg}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                html = `
+                    <div class="w-full">
+                        <div class="text-center mb-4">
+                            <span class="inline-block px-4 py-2 rounded-lg font-bold text-lg ${isScanned ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}">
+                                ${isScanned ? '✓ Đã Scan' : 'Chưa Scan'} - Mã ${scanCurrentIndex + 1}/${scanItems.length}
+                            </span>
+                        </div>
+                        <div class="flex justify-center">
+                            ${currentItem.svg}
+                        </div>
+                    </div>
+                `;
+            }
+
+            display.innerHTML = html;
+
+            // Update button states
+            document.getElementById('scan-prev-btn').disabled = scanCurrentIndex === 0;
+            document.getElementById('scan-next-btn').disabled = scanCurrentIndex === scanItems.length - 1;
+
+            // Update mark button text
+            const markBtn = document.getElementById('scan-mark-btn');
+            if (isScanned) {
+                markBtn.className = 'mt-4 w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition text-lg';
+                markBtn.innerHTML = 'Bỏ Đánh Dấu';
+            } else {
+                markBtn.className = 'mt-4 w-full bg-green-600 active:bg-green-800 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg shadow-lg transition transform active:scale-95 text-lg';
+                markBtn.innerHTML = '✓ Đã Scan - Tiếp Theo';
+            }
+        }
+
+        function updateScanProgress() {
+            const scannedCount = scannedItems.size;
+            const totalCount = scanItems.length;
+            const percentage = totalCount > 0 ? (scannedCount / totalCount) * 100 : 0;
+
+            document.getElementById('scan-progress-text').innerText = `${scannedCount}/${totalCount}`;
+            document.getElementById('scan-progress-bar').style.width = `${percentage}%`;
+        }
+
+        function scanPrevious() {
+            if (scanCurrentIndex > 0) {
+                scanCurrentIndex--;
+                renderScanItem();
+            }
+        }
+
+        function scanNext() {
+            if (scanCurrentIndex < scanItems.length - 1) {
+                scanCurrentIndex++;
+                renderScanItem();
+            }
+        }
+
+        function markAsScanned() {
+            const isScanned = scannedItems.has(scanCurrentIndex);
+
+            if (isScanned) {
+                // Unmark
+                scannedItems.delete(scanCurrentIndex);
+            } else {
+                // Mark as scanned
+                scannedItems.add(scanCurrentIndex);
+
+                // Auto-advance to next if not last item
+                if (scanCurrentIndex < scanItems.length - 1) {
+                    setTimeout(() => {
+                        scanNext();
+                    }, 200);
+                }
+            }
+
+            renderScanItem();
+            updateScanProgress();
+        }
+
+        function exitScanMode() {
+            scanModeActive = false;
+            scanItems = [];
+            scanCurrentIndex = 0;
+            scannedItems = new Set();
+
+            document.getElementById('scan-mode-container').classList.add('hidden');
+
+            // Scroll back to control panel
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     </script>
 </body>
