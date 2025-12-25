@@ -35,11 +35,18 @@
             page-break-inside: avoid;
         }
 
-        /* Đảm bảo SVG co giãn tốt trên màn hình nhỏ */
+        /* Đảm bảo SVG co giãn tốt nhưng không bị bóp méo quá mức */
         svg {
             max-width: 100%;
             height: auto;
             display: block;
+            /* Quan trọng: Để barcode không bị scale nhỏ quá mức khi width tăng */
+            min-width: 150px;
+        }
+
+        /* Khi ở trong cặp barcode, cho phép cuộn ngang nếu màn hình quá bé thay vì bóp barcode */
+        .barcode-pair svg {
+            flex-shrink: 0;
         }
 
         /* Input Styles cho Mobile: Chữ to, padding rộng để dễ bấm */
@@ -102,6 +109,29 @@
                 class="flex-1 py-4 text-center font-medium text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none transition-colors border-b-4 border-transparent active:bg-gray-100">
                 Tạo Theo Cặp
             </button>
+        </div>
+
+        <!-- LEGACY SCANNER MODE TOGGLE -->
+        <div class="px-4 md:px-6 py-3 bg-gradient-to-r from-yellow-50 to-orange-50 border-y border-orange-200">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="text-2xl">📱</div>
+                    <div>
+                        <div class="font-bold text-gray-800 text-sm">Chế Độ Máy Scan Cũ</div>
+                        <div class="text-xs text-gray-600">Tối ưu cho PDA/máy cũ (VD: Zebra MC3200)</div>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="legacy-mode-toggle" class="sr-only peer" onchange="toggleLegacyMode()">
+                    <div
+                        class="w-14 h-8 bg-gray-300 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-orange-500">
+                    </div>
+                </label>
+            </div>
+            <div id="legacy-mode-info"
+                class="hidden mt-2 text-xs text-orange-800 bg-orange-100 p-2 rounded border border-orange-300">
+                ✓ <strong>Đã bật:</strong> Barcode to, rõ hơn, dễ scan với máy cũ
+            </div>
         </div>
 
         <div class="p-4 md:p-6">
@@ -298,6 +328,13 @@
         let scannedItems = new Set();
         let currentScanType = 'simple'; // 'simple' or 'pair'
 
+        // --- LEGACY SCANNER MODE ---
+        let legacyModeEnabled = false;
+
+        // Track last generation for auto-regenerate
+        let lastGenerationType = null; // 'simple' or 'pair'
+        let lastGenerationParams = null;
+
         // --- XỬ LÝ GIAO DIỆN ---
         function switchTab(tab) {
             const simpleBtn = document.getElementById('tab-simple');
@@ -318,6 +355,53 @@
                 pairBtn.className = 'flex-1 py-4 text-center font-medium text-blue-600 border-b-4 border-blue-600 bg-blue-50 focus:outline-none transition-colors';
                 simpleBtn.className = 'flex-1 py-4 text-center font-medium text-gray-500 hover:text-blue-600 hover:bg-gray-50 focus:outline-none transition-colors border-b-4 border-transparent';
             }
+        }
+
+        // Toggle Legacy Scanner Mode
+        function toggleLegacyMode() {
+            legacyModeEnabled = document.getElementById('legacy-mode-toggle').checked;
+            const infoDiv = document.getElementById('legacy-mode-info');
+
+            if (legacyModeEnabled) {
+                infoDiv.classList.remove('hidden');
+            } else {
+                infoDiv.classList.add('hidden');
+            }
+
+            // Auto-regenerate if barcodes already exist
+            if (lastGenerationType && lastGenerationParams) {
+                const resultArea = document.getElementById('result-area');
+                const hasContent = !resultArea.querySelector('#placeholder');
+
+                if (hasContent) {
+                    // Regenerate with new settings
+                    if (lastGenerationType === 'simple') {
+                        generateSimpleWithParams(lastGenerationParams);
+                    } else if (lastGenerationType === 'pair') {
+                        generatePairsWithParams(lastGenerationParams);
+                    }
+
+                    // Show notification
+                    showNotification(legacyModeEnabled ?
+                        '✓ Đã chuyển sang Chế độ Máy Cũ - Barcode to hơn!' :
+                        '✓ Đã tắt Chế độ Máy Cũ - Barcode bình thường'
+                    );
+                }
+            }
+        }
+
+        // Show temporary notification
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in font-bold';
+            notification.innerHTML = message;
+            document.body.appendChild(notification);
+
+            setTimeout(() => {
+                notification.style.opacity = '0';
+                notification.style.transition = 'opacity 0.3s';
+                setTimeout(() => notification.remove(), 300);
+            }, 2000);
         }
 
         // Toggle between manual and auto mode for simple codes
@@ -365,15 +449,33 @@
         }
 
         // --- CẤU HÌNH BARCODE ---
-        const barcodeOptions = {
-            format: "CODE128",
-            lineColor: "#000",
-            width: 2,
-            height: 60, // Tăng chiều cao một chút cho dễ scan trên mobile
-            displayValue: true,
-            fontSize: 16, // Chữ to hơn
-            margin: 10
-        };
+        function getBarcodeOptions() {
+            if (legacyModeEnabled) {
+                // Legacy mode: Optimized for older scanners
+                return {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 4,           // Thicker bars for better readability
+                    height: 100,        // Taller for easier scanning
+                    displayValue: true,
+                    fontSize: 20,       // Larger font
+                    margin: 20,         // More margin space
+                    textMargin: 5
+                };
+            } else {
+                // Normal mode: Compact and efficient
+                return {
+                    format: "CODE128",
+                    lineColor: "#000",
+                    width: 2,
+                    height: 60,
+                    displayValue: true,
+                    fontSize: 16,
+                    margin: 10
+                };
+            }
+        }
+
 
         // --- LOGIC XỬ LÝ MÃ ---
         function incrementCode(codeStr, addValue) {
@@ -395,6 +497,7 @@
             const isAutoMode = !document.getElementById('simple-auto-mode').classList.contains('hidden');
 
             let codes = [];
+            let params = { isAutoMode };
 
             if (isAutoMode) {
                 // Auto-generate mode
@@ -405,6 +508,9 @@
                     alert("Vui lòng nhập Mã Bắt Đầu và Số Lượng!");
                     return;
                 }
+
+                params.startCode = startCode;
+                params.count = count;
 
                 // Generate consecutive codes
                 for (let i = 0; i < count; i++) {
@@ -418,6 +524,8 @@
                     alert("Bạn chưa nhập mã nào cả!");
                     return;
                 }
+
+                params.inputText = input;
 
                 const lines = input.split('\n');
                 lines.forEach(line => {
@@ -433,6 +541,10 @@
                 return;
             }
 
+            // Save params for regeneration
+            lastGenerationType = 'simple';
+            lastGenerationParams = params;
+
             const grid = document.createElement('div');
             // Mobile: 1 cột, Tablet trở lên: 2 cột
             grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
@@ -444,7 +556,7 @@
                 const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
                 try {
-                    JsBarcode(svg, code, barcodeOptions);
+                    JsBarcode(svg, code, getBarcodeOptions());
                     card.appendChild(svg);
                 } catch (e) {
                     const err = document.createElement('div');
@@ -461,6 +573,52 @@
             }, 100);
         }
 
+        // Helper function to regenerate simple barcodes with saved params
+        function generateSimpleWithParams(params) {
+            const container = document.getElementById('result-area');
+            container.innerHTML = '';
+
+            let codes = [];
+
+            if (params.isAutoMode) {
+                // Auto-generate mode
+                for (let i = 0; i < params.count; i++) {
+                    codes.push(incrementCode(params.startCode, i));
+                }
+            } else {
+                // Manual mode
+                const lines = params.inputText.split('\n');
+                lines.forEach(line => {
+                    const code = line.trim();
+                    if (code) {
+                        codes.push(code);
+                    }
+                });
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'grid grid-cols-1 md:grid-cols-2 gap-3';
+
+            codes.forEach(code => {
+                const card = document.createElement('div');
+                card.className = 'barcode-card shadow-sm';
+
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                try {
+                    JsBarcode(svg, code, getBarcodeOptions());
+                    card.appendChild(svg);
+                } catch (e) {
+                    const err = document.createElement('div');
+                    err.innerHTML = `<span class="text-red-500 font-bold">Lỗi mã:</span> ${code}`;
+                    card.appendChild(err);
+                }
+                grid.appendChild(card);
+            });
+
+            container.appendChild(grid);
+        }
+
         // --- TẠO CẶP ---
         function generatePairs() {
             const startUpper = document.getElementById('upperStart').value.trim();
@@ -472,6 +630,14 @@
                 alert("Vui lòng nhập đủ thông tin (Mã Da, Mã Đế, Số lượng).");
                 return;
             }
+
+            // Save params for regeneration
+            lastGenerationType = 'pair';
+            lastGenerationParams = {
+                startUpper,
+                startSole,
+                count
+            };
 
             container.innerHTML = '';
 
@@ -500,8 +666,8 @@
                 const svgSole = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
                 try {
-                    JsBarcode(svgUpper, currentUpper, barcodeOptions);
-                    JsBarcode(svgSole, currentSole, barcodeOptions);
+                    JsBarcode(svgUpper, currentUpper, getBarcodeOptions());
+                    JsBarcode(svgSole, currentSole, getBarcodeOptions());
                 } catch (e) {
                     alert("Mã không hợp lệ để tạo Barcode 128");
                     return;
@@ -531,6 +697,61 @@
             }, 100);
         }
 
+        // Helper function to regenerate pairs with saved params
+        function generatePairsWithParams(params) {
+            const { startUpper, startSole, count } = params;
+            const container = document.getElementById('result-area');
+            container.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const currentUpper = incrementCode(startUpper, i);
+                const currentSole = incrementCode(startSole, i);
+
+                const pairRow = document.createElement('div');
+                pairRow.className = 'barcode-pair flex flex-col md:flex-row items-center justify-center gap-6 p-4 bg-white rounded-lg shadow border border-gray-200 mb-4';
+
+                // Wrapper Da
+                const upperWrapper = document.createElement('div');
+                upperWrapper.className = 'text-center w-full md:w-auto';
+                const upperTitle = document.createElement('div');
+                upperTitle.className = 'text-sm font-bold text-gray-500 mb-1 bg-gray-100 inline-block px-2 rounded';
+                upperTitle.innerText = `Da - Size ${i + 1}`;
+                const svgUpper = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                // Wrapper Đế
+                const soleWrapper = document.createElement('div');
+                soleWrapper.className = 'text-center w-full md:w-auto';
+                const soleTitle = document.createElement('div');
+                soleTitle.className = 'text-sm font-bold text-gray-500 mb-1 bg-gray-100 inline-block px-2 rounded';
+                soleTitle.innerText = `Đế - Size ${i + 1}`;
+                const svgSole = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+
+                try {
+                    JsBarcode(svgUpper, currentUpper, getBarcodeOptions());
+                    JsBarcode(svgSole, currentSole, getBarcodeOptions());
+                } catch (e) {
+                    console.error("Error generating legacy barcode pair", e);
+                    continue;
+                }
+
+                upperWrapper.appendChild(upperTitle);
+                upperWrapper.appendChild(svgUpper);
+
+                soleWrapper.appendChild(soleTitle);
+                soleWrapper.appendChild(svgSole);
+
+                pairRow.appendChild(upperWrapper);
+
+                const divider = document.createElement('div');
+                divider.className = 'w-full h-px bg-gray-200 md:w-px md:h-24 md:bg-gray-300 mx-2';
+                pairRow.appendChild(divider);
+
+                pairRow.appendChild(soleWrapper);
+
+                container.appendChild(pairRow);
+            }
+        }
+
         // --- SCAN MODE FUNCTIONS ---
         function activateScanMode() {
             const resultArea = document.getElementById('result-area');
@@ -557,11 +778,15 @@
                     const upperTitle = pair.querySelectorAll('.text-sm')[0]?.innerText || `Da - ${index + 1}`;
                     const soleTitle = pair.querySelectorAll('.text-sm')[1]?.innerText || `Đế - ${index + 1}`;
 
+                    // Extract values
+                    const upperValue = upperSvg.getAttribute('jsbarcode-value') || upperSvg.textContent;
+                    const soleValue = soleSvg.getAttribute('jsbarcode-value') || soleSvg.textContent;
+
                     scanItems.push({
                         index,
                         type: 'pair',
-                        upperSvg: upperSvg.outerHTML,
-                        soleSvg: soleSvg.outerHTML,
+                        upperValue,
+                        soleValue,
                         upperTitle,
                         soleTitle
                     });
@@ -572,10 +797,11 @@
                 simpleBarcodes.forEach((card, index) => {
                     const svg = card.querySelector('svg');
                     if (svg) {
+                        const value = svg.getAttribute('jsbarcode-value') || svg.textContent;
                         scanItems.push({
                             index,
                             type: 'simple',
-                            svg: svg.outerHTML
+                            value
                         });
                     }
                 });
@@ -623,12 +849,12 @@
                         <div class="flex flex-col md:flex-row items-center justify-center gap-6">
                             <div class="text-center">
                                 <div class="text-sm font-bold text-gray-500 mb-2">${currentItem.upperTitle}</div>
-                                ${currentItem.upperSvg}
+                                <svg id="scan-upper-svg"></svg>
                             </div>
                             <div class="w-full h-px bg-gray-300 md:w-px md:h-32"></div>
                             <div class="text-center">
                                 <div class="text-sm font-bold text-gray-500 mb-2">${currentItem.soleTitle}</div>
-                                ${currentItem.soleSvg}
+                                <svg id="scan-sole-svg"></svg>
                             </div>
                         </div>
                     </div>
@@ -642,13 +868,25 @@
                             </span>
                         </div>
                         <div class="flex justify-center">
-                            ${currentItem.svg}
+                            <svg id="scan-simple-svg"></svg>
                         </div>
                     </div>
                 `;
             }
 
             display.innerHTML = html;
+
+            // Generate Barcodes dynamically
+            try {
+                if (currentItem.type === 'pair') {
+                    JsBarcode("#scan-upper-svg", currentItem.upperValue, getBarcodeOptions());
+                    JsBarcode("#scan-sole-svg", currentItem.soleValue, getBarcodeOptions());
+                } else {
+                    JsBarcode("#scan-simple-svg", currentItem.value, getBarcodeOptions());
+                }
+            } catch (e) {
+                console.error("Error rendering scan barcode", e);
+            }
 
             // Update button states
             document.getElementById('scan-prev-btn').disabled = scanCurrentIndex === 0;
