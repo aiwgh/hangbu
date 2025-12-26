@@ -231,28 +231,28 @@
             </div>
 
             <!-- Action Buttons -->
-            <div class="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-gray-100">
+            <div class="flex flex-col md:flex-row items-center justify-center gap-3 mt-6 pt-4 border-t border-gray-100">
                 <button onclick="clearResults()"
-                    class="flex items-center justify-center py-3 px-4 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium active:bg-gray-200">
+                    class="w-full md:w-auto flex items-center justify-center py-3 px-6 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium active:bg-gray-200 transition-colors">
                     Xóa
                 </button>
                 <button onclick="activateScanMode()" id="scan-mode-btn"
-                    class="flex items-center justify-center py-3 px-4 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold shadow active:bg-orange-800">
-                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="w-full md:w-auto flex items-center justify-center py-3 px-6 bg-orange-600 text-white rounded-lg hover:bg-orange-700 font-bold shadow active:bg-orange-800 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z">
                         </path>
                     </svg>
-                    Scan
+                    <span>Scan</span>
                 </button>
                 <button onclick="window.print()"
-                    class="flex items-center justify-center py-3 px-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold shadow active:bg-purple-800">
-                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    class="w-full md:w-auto flex items-center justify-center py-3 px-6 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-bold shadow active:bg-purple-800 transition-colors">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
                         </path>
                     </svg>
-                    In
+                    <span>In</span>
                 </button>
             </div>
         </div>
@@ -390,18 +390,48 @@
             }
         }
 
-        // Show temporary notification
-        function showNotification(message) {
+        // Show temporary notification with optional action
+        function showNotification(message, action = null) {
+            // Remove existing notification if any
+            const existing = document.getElementById('toast-notification');
+            if (existing) existing.remove();
+
             const notification = document.createElement('div');
-            notification.className = 'fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in font-bold';
-            notification.innerHTML = message;
+            notification.id = 'toast-notification';
+            notification.className = 'fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in flex items-center gap-3';
+
+            // Message part
+            const msgSpan = document.createElement('span');
+            msgSpan.className = 'font-bold';
+            msgSpan.innerHTML = message;
+            notification.appendChild(msgSpan);
+
+            // Action button (e.g., Undo)
+            if (action) {
+                const actionBtn = document.createElement('button');
+                actionBtn.className = 'bg-white text-gray-800 text-xs px-2 py-1 rounded hover:bg-gray-200 font-bold ml-2';
+                actionBtn.innerText = action.label;
+                actionBtn.onclick = () => {
+                    action.callback();
+                    notification.remove();
+                };
+                notification.appendChild(actionBtn);
+            }
+
             document.body.appendChild(notification);
 
+            // Auto dismiss
             setTimeout(() => {
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.3s';
-                setTimeout(() => notification.remove(), 300);
-            }, 2000);
+                if (notification && document.body.contains(notification)) {
+                    notification.style.opacity = '0';
+                    notification.style.transition = 'opacity 0.3s';
+                    setTimeout(() => {
+                        if (notification && document.body.contains(notification)) {
+                            notification.remove();
+                        }
+                    }, 300);
+                }
+            }, 4000); // 4 seconds
         }
 
         // Toggle between manual and auto mode for simple codes
@@ -959,6 +989,60 @@
             // Scroll back to control panel
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
+
+        // --- SAFETY & AUTOCOMPLETE ---
+
+        // Prevent accidental close/reload
+        window.addEventListener('beforeunload', (e) => {
+            const simpleInput = document.getElementById('simpleInput').value.trim();
+            const upperStart = document.getElementById('upperStart').value.trim();
+            const soleStart = document.getElementById('soleStart').value.trim();
+
+            // If any input has data, warn user
+            if (simpleInput || upperStart || soleStart) {
+                e.preventDefault();
+                e.returnValue = ''; // Chrome requires this
+                return '';
+            }
+        });
+
+        function setupPairAutocomplete() {
+            const upperInput = document.getElementById('upperStart');
+            const soleInput = document.getElementById('soleStart');
+
+            if (!upperInput || !soleInput) return;
+
+            // When focusing on Sole input, if empty, copy from Upper
+            soleInput.addEventListener('focus', () => {
+                if (!soleInput.value.trim() && upperInput.value.trim()) {
+                    soleInput.value = upperInput.value.trim();
+                    showNotification("⚡ Đã tự động điền theo Mã Da", {
+                        label: "HOÀN TÁC",
+                        callback: () => {
+                            soleInput.value = "";
+                            soleInput.focus();
+                        }
+                    });
+                }
+            });
+
+            // When focusing on Upper input, if empty, copy from Sole
+            upperInput.addEventListener('focus', () => {
+                if (!upperInput.value.trim() && soleInput.value.trim()) {
+                    upperInput.value = soleInput.value.trim();
+                    showNotification("⚡ Đã tự động điền theo Mã Đế", {
+                        label: "HOÀN TÁC",
+                        callback: () => {
+                            upperInput.value = "";
+                            upperInput.focus();
+                        }
+                    });
+                }
+            });
+        }
+
+        // Initialize autocomplete
+        setupPairAutocomplete();
     </script>
 </body>
 
